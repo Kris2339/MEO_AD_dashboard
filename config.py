@@ -2,7 +2,7 @@
 CREDENTIALS_FILE = "credentials.json"
 
 # Google Sheets 설정
-SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE"
+SPREADSHEET_ID = "1WLkixIVo3WNjo2ftpqJobL5XkUUnGt6TVH2DWzfp2ws"
 SHEET_NAME = "30일"
 
 # 열 인덱스 (0-based)
@@ -14,7 +14,7 @@ COL_CLICKS = 9          # J열: 클릭수 (필요시 수정)
 COL_CONVERSION_VALUE = 10  # K열: 매출 또는 전환값
 
 # Google Drive 설정
-DRIVE_FOLDER_ID = "YOUR_DRIVE_FOLDER_ID_HERE"
+DRIVE_FOLDER_ID = "1bwd4Y_h7Zz4lEJOfMaPmn2JBpqoc6R6h"
 
 # 캐시 설정 (초)
 DRIVE_CACHE_TTL = 300  # 5분
