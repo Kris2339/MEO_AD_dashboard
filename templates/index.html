@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>광고 소재 성과 대시보드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card-video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      background: #111827;
+    }
+    .card-video-wrapper iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: 0;
+    }
+    .no-video-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 160px;
+      background: #1f2937;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+    .stat-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid #374151;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .card-enter {
+      animation: fadeInUp 0.3s ease both;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="hidden">
+  <div class="text-center">
+    <div class="spinner mx-auto mb-3"></div>
+    <p class="text-gray-400 text-sm">데이터 로딩 중...</p>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="bg-gray-900 border-b border-gray-800 px-6 py-4 sticky top-0 z-40">
+  <div class="max-w-screen-2xl mx-auto flex items-center justify-between flex-wrap gap-3">
+    <h1 class="text-xl font-bold text-white tracking-tight">
+      <span class="text-blue-400">&#9654;</span> 광고 소재 성과 대시보드
+    </h1>
+    <div class="flex items-center gap-2 text-sm text-gray-400">
+      <span id="result-count" class="text-gray-300 font-semibold"></span>
+      <button onclick="refreshCache()"
+        class="ml-3 px-3 py-1.5 rounded bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition">
+        캐시 갱신
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Filters -->
+<div class="bg-gray-900 border-b border-gray-800 px-6 py-3 sticky top-[65px] z-30">
+  <div class="max-w-screen-2xl mx-auto flex flex-wrap items-center gap-3">
+
+    <!-- 검색 -->
+    <div class="relative">
+      <input id="search-input" type="text" placeholder="소재명 검색..."
+        class="bg-gray-800 border border-gray-700 text-sm text-gray-200 rounded-lg pl-9 pr-3 py-2 w-52 focus:outline-none focus:border-blue-500 placeholder-gray-500" />
+      <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+      </svg>
+    </div>
+
+    <!-- 기간 필터 -->
+    <div class="flex gap-1 bg-gray-800 rounded-lg p-1">
+      <button class="period-btn px-3 py-1 rounded text-xs font-medium transition" data-days="7">7일</button>
+      <button class="period-btn px-3 py-1 rounded text-xs font-medium transition" data-days="14">14일</button>
+      <button class="period-btn px-3 py-1 rounded text-xs font-medium transition active" data-days="30">30일</button>
+    </div>
+
+    <!-- 캠페인 목표 필터 -->
+    <div class="flex gap-1 bg-gray-800 rounded-lg p-1">
+      <button class="goal-btn px-3 py-1 rounded text-xs font-medium transition active" data-goal="">전체</button>
+      <button class="goal-btn px-3 py-1 rounded text-xs font-medium transition" data-goal="OUTCOME_SALES">OUTCOME_SALES</button>
+      <button class="goal-btn px-3 py-1 rounded text-xs font-medium transition" data-goal="WEB_CONVERSIONS">WEB_CONVERSIONS</button>
+    </div>
+
+    <!-- 정렬 -->
+    <select id="sort-select"
+      class="bg-gray-800 border border-gray-700 text-sm text-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 cursor-pointer">
+      <option value="revenue">매출 높은 순</option>
+      <option value="ctr">CTR 높은 순</option>
+      <option value="conversions">전환수 높은 순</option>
+      <option value="latest">최신순</option>
+    </select>
+
+  </div>
+</div>
+
+<!-- Cards Grid -->
+<main class="max-w-screen-2xl mx-auto px-6 py-6">
+  <div id="error-banner" class="hidden mb-4 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm"></div>
+  <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+    <!-- JS로 렌더링 -->
+  </div>
+  <div id="empty-state" class="hidden text-center py-20 text-gray-500">
+    <p class="text-4xl mb-3">&#128247;</p>
+    <p class="text-lg font-medium">표시할 소재가 없습니다</p>
+    <p class="text-sm mt-1">필터 조건을 변경해보세요.</p>
+  </div>
+</main>
+
+<script>
+  // 현재 필터 상태
+  const state = {
+    days: 30,
+    campaign_goal: "",
+    sort_by: "revenue",
+    search: "",
+  };
+
+  let searchTimer = null;
+
+  // 숫자 포맷
+  const fmt = (n) => Number(n).toLocaleString("ko-KR");
+  const fmtRevenue = (n) => {
+    if (n >= 100000000) return (n / 100000000).toFixed(1) + "억";
+    if (n >= 10000) return (n / 10000).toFixed(1) + "만";
+    return fmt(n);
+  };
+
+  function showLoading(show) {
+    document.getElementById("loading-overlay").classList.toggle("hidden", !show);
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("error-banner");
+    el.textContent = msg;
+    el.classList.remove("hidden");
+  }
+
+  function hideError() {
+    document.getElementById("error-banner").classList.add("hidden");
+  }
+
+  function goalBadgeClass(goal) {
+    if (goal === "OUTCOME_SALES") return "bg-emerald-900 text-emerald-300";
+    if (goal === "WEB_CONVERSIONS") return "bg-blue-900 text-blue-300";
+    return "bg-gray-700 text-gray-300";
+  }
+
+  function renderCards(creatives) {
+    const grid = document.getElementById("cards-grid");
+    const empty = document.getElementById("empty-state");
+    grid.innerHTML = "";
+
+    if (!creatives || creatives.length === 0) {
+      empty.classList.remove("hidden");
+      return;
+    }
+    empty.classList.add("hidden");
+
+    creatives.forEach((c, i) => {
+      const card = document.createElement("div");
+      card.className = "card-enter bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-gray-600 transition flex flex-col";
+      card.style.animationDelay = `${Math.min(i * 30, 300)}ms`;
+
+      const videoSection = c.has_video
+        ? `<div class="card-video-wrapper">
+             <iframe src="${c.embed_url}" allowfullscreen allow="autoplay"></iframe>
+           </div>`
+        : `<div class="card-video-wrapper">
+             <div class="no-video-placeholder">
+               <div class="text-center">
+                 <div class="text-3xl mb-1">&#127909;</div>
+                 <div>영상 없음</div>
+               </div>
+             </div>
+           </div>`;
+
+      card.innerHTML = `
+        ${videoSection}
+        <div class="p-4 flex flex-col gap-3 flex-1">
+          <div>
+            <p class="text-sm font-semibold text-white leading-snug line-clamp-2 mb-1.5" title="${escHtml(c.creative_name)}">
+              ${escHtml(c.creative_name)}
+            </p>
+            <span class="stat-badge ${goalBadgeClass(c.campaign_goal)}">${escHtml(c.campaign_goal) || "—"}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-gray-800 rounded-lg p-2.5">
+              <div class="text-gray-500 mb-0.5">노출</div>
+              <div class="text-gray-100 font-semibold">${fmt(c.impressions)}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-2.5">
+              <div class="text-gray-500 mb-0.5">클릭</div>
+              <div class="text-gray-100 font-semibold">${fmt(c.clicks)}</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-2.5">
+              <div class="text-gray-500 mb-0.5">CTR</div>
+              <div class="font-semibold ${c.ctr >= 2 ? 'text-emerald-400' : c.ctr >= 1 ? 'text-yellow-400' : 'text-gray-100'}">${c.ctr}%</div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-2.5">
+              <div class="text-gray-500 mb-0.5">전환수</div>
+              <div class="text-gray-100 font-semibold">${fmt(c.conversions)}</div>
+            </div>
+          </div>
+          <div class="bg-blue-950 border border-blue-800 rounded-lg p-2.5 text-xs">
+            <div class="text-blue-400 mb-0.5">매출 / 전환값</div>
+            <div class="text-blue-100 font-bold text-base">${fmtRevenue(c.revenue)}</div>
+          </div>
+          <div class="text-xs text-gray-600 mt-auto">최근: ${c.latest_date || "—"}</div>
+        </div>`;
+
+      grid.appendChild(card);
+    });
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  async function fetchCreatives() {
+    showLoading(true);
+    hideError();
+    const params = new URLSearchParams({
+      days: state.days,
+      campaign_goal: state.campaign_goal,
+      sort_by: state.sort_by,
+      search: state.search,
+    });
+    try {
+      const res = await fetch(`/api/creatives?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        showError("오류: " + (data.error || res.statusText));
+        renderCards([]);
+        return;
+      }
+      document.getElementById("result-count").textContent = `소재 ${data.total}개`;
+      renderCards(data.creatives);
+    } catch (e) {
+      showError("서버에 연결할 수 없습니다: " + e.message);
+      renderCards([]);
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  async function refreshCache() {
+    showLoading(true);
+    try {
+      const res = await fetch("/api/refresh-cache");
+      const data = await res.json();
+      alert(data.message || data.error || "완료");
+      await fetchCreatives();
+    } catch (e) {
+      alert("오류: " + e.message);
+      showLoading(false);
+    }
+  }
+
+  // 기간 버튼
+  document.querySelectorAll(".period-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".period-btn").forEach((b) => b.classList.remove("active", "bg-blue-600", "text-white"));
+      btn.classList.add("active", "bg-blue-600", "text-white");
+      state.days = parseInt(btn.dataset.days);
+      fetchCreatives();
+    });
+  });
+
+  // 목표 버튼
+  document.querySelectorAll(".goal-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".goal-btn").forEach((b) => b.classList.remove("active", "bg-blue-600", "text-white"));
+      btn.classList.add("active", "bg-blue-600", "text-white");
+      state.campaign_goal = btn.dataset.goal;
+      fetchCreatives();
+    });
+  });
+
+  // 정렬
+  document.getElementById("sort-select").addEventListener("change", (e) => {
+    state.sort_by = e.target.value;
+    fetchCreatives();
+  });
+
+  // 검색 (debounce)
+  document.getElementById("search-input").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.search = e.target.value.trim();
+      fetchCreatives();
+    }, 400);
+  });
+
+  // 초기 active 스타일 적용
+  document.querySelectorAll(".period-btn.active, .goal-btn.active").forEach((b) => {
+    b.classList.add("bg-blue-600", "text-white");
+  });
+
+  // 초기 로드
+  fetchCreatives();
+</script>
+</body>
+</html>
